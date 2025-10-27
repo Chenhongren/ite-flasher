@@ -7,11 +7,11 @@
 #ifndef LOGGING_H_
 #define LOGGING_H_
 
+#include "util.h"
 #include "parameters.h"
 
-#define IS_DEBUG_MODE_ENABLED() (flags & BIT(FLAG_DEBUG_MODE_ENABLE))
 #define LOG_ERR(fmt, args...)                                                                      \
-	if (IS_DEBUG_MODE_ENABLED()) {                                                             \
+	if (debug_mode) {                                                                          \
 		fprintf(stderr, "<error> %s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__,     \
 			##args);                                                                   \
 	} else {                                                                                   \
@@ -19,7 +19,7 @@
 	}
 
 #define LOG_WARN(fmt, args...)                                                                     \
-	if (IS_DEBUG_MODE_ENABLED()) {                                                             \
+	if (debug_mode) {                                                                          \
 		fprintf(stdout, "<warn>  %s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__,     \
 			##args);                                                                   \
 	} else {                                                                                   \
@@ -27,7 +27,7 @@
 	}
 
 #define LOG_INFO(fmt, args...)                                                                     \
-	if (IS_DEBUG_MODE_ENABLED()) {                                                             \
+	if (debug_mode) {                                                                          \
 		fprintf(stdout, "<info>  %s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__,     \
 			##args);                                                                   \
 	} else {                                                                                   \
@@ -35,7 +35,7 @@
 	}
 
 #define LOG_DBG(fmt, args...)                                                                      \
-	if (IS_DEBUG_MODE_ENABLED()) {                                                             \
+	if (debug_mode) {                                                                          \
 		fprintf(stdout, "<debug> %s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__,     \
 			##args);                                                                   \
 	} else {                                                                                   \

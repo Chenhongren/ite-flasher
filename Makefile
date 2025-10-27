@@ -19,7 +19,7 @@ LDFLAGS  = -L../lib
 LDLIBS   = -lusb-1.0
 
 # --- Source Files ---
-SRCS     = ./src/ite_flasher.c
+SRCS     = ./src/ite_flasher.c ./src/main.c ./src/util.c
 OBJS     = $(SRCS:.c=.o)
 
 # --- Targets ---
