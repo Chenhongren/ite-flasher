@@ -7,6 +7,8 @@
 #ifndef ITE_FLASHER_H_
 #define ITE_FLASHER_H_
 
+#include "libusb.h"
+
 #define OUTPUT_LIBUSB_ERROR_STRING(err)                                                            \
 	LOG_ERR("libusb: %s\n", libusb_strerror((enum libusb_error)err));
 
@@ -110,7 +112,7 @@ struct flash_file_info_t {
 	int block_num;
 	int flash_size;
 	int size_kb;
-	int size;
+	size_t size;
 };
 
 struct flash_info_t {

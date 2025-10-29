@@ -36,7 +36,7 @@ void hexdump(const unsigned char *buffer, const size_t offset, size_t len)
 		len = SIZE_MAX - offset;
 	}
 
-	for (int i = 0; i < len; i++) {
+	for (size_t i = 0; i < len; i++) {
 		if ((i % 16 == 0)) {
 			LOG_RAW(" %08llx :", (unsigned long long)(offset + i));
 		}

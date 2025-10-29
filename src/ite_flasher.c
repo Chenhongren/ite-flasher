@@ -491,7 +491,7 @@ int flash_erase(const bool use_spi)
 		return 0;
 	}
 
-	for (int i = 0; i < blocks; i++) {
+	for (uint32_t i = 0; i < blocks; i++) {
 		for (int sector = 0; sector < 16; sector++) {
 			int address = (sector << 4) + 0xF;
 
@@ -836,11 +836,6 @@ int init_file(char *filename)
 	}
 
 	file.size = ftell(file.fd);
-	if (file.size < 0) {
-		LOG_ERR("failed to get file size");
-		SAFE_CLOSE_FD(file.fd);
-		return -EIO;
-	}
 
 	fseek(file.fd, 0, SEEK_SET);
 
@@ -876,7 +871,7 @@ int init_file(char *filename)
 		goto out;
 	}
 
-	LOG_INFO("flash size: %d bytes, file size: %d bytes (%d KB)\n", file.flash_size, file.size,
+	LOG_INFO("flash size: %d bytes, file size: %ld bytes (%d KB)\n", file.flash_size, file.size,
 		 file.size_kb);
 
 	SAFE_CLOSE_FD(file.fd);
