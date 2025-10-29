@@ -60,7 +60,7 @@ static void print_parameters(const int flags)
 	char intfs[8];
 
 	LOG_INFO("-------------------------------");
-	if (flags & BIT(FLAG_USE_SPI)) {
+	if (USE_SPI(flags)) {
 		snprintf(intfs, sizeof(intfs), "spi");
 	} else {
 		snprintf(intfs, sizeof(intfs), "i2c");
@@ -71,7 +71,7 @@ static void print_parameters(const int flags)
 		LOG_INFO("debug mode is enabled");
 	}
 
-	if (flags & BIT(FLAG_ERASE_STAGE_ONLY)) {
+	if (GET_BIT(flags, FLAG_ERASE_STAGE_ONLY)) {
 		LOG_INFO("erase stage only");
 		goto out;
 	}
@@ -80,16 +80,16 @@ static void print_parameters(const int flags)
 		char skip_stages[32] = {0};
 		int idx = 0;
 
-		if (flags & BIT(FLAG_SKIP_CHECK_STAGE)) {
+		if (GET_BIT(flags, FLAG_SKIP_CHECK_STAGE)) {
 			idx += snprintf(skip_stages + idx, sizeof(skip_stages) - idx, "check ");
 		}
-		if (flags & BIT(FLAG_SKIP_VERIFY_STAGE)) {
+		if (GET_BIT(flags, FLAG_SKIP_VERIFY_STAGE)) {
 			idx += snprintf(skip_stages + idx, sizeof(skip_stages) - idx, "verify ");
 		}
 		if (idx > 0) {
-			LOG_INFO("Skip stages: %s", skip_stages);
+			LOG_INFO("skip stages: %s", skip_stages);
 		} else {
-			LOG_WARN("No skip stages specified");
+			LOG_WARN("no skip stages specified");
 		}
 	}
 
@@ -131,17 +131,17 @@ int main(int argc, char **argv)
 			break;
 		case 's':
 			if (strcmp(optarg, "check") == 0) {
-				flags |= BIT(FLAG_SKIP_CHECK_STAGE);
+				SET_BIT(flags, FLAG_SKIP_CHECK_STAGE);
 			}
 			if (strcmp(optarg, "verify") == 0) {
-				flags |= BIT(FLAG_SKIP_VERIFY_STAGE);
+				SET_BIT(flags, FLAG_SKIP_VERIFY_STAGE);
 			}
 			break;
 		case 'u':
-			flags |= BIT(FLAG_USE_SPI);
+			SET_BIT(flags, FLAG_USE_SPI);
 			break;
 		case 'e':
-			flags |= BIT(FLAG_ERASE_STAGE_ONLY);
+			SET_BIT(flags, FLAG_ERASE_STAGE_ONLY);
 			break;
 		case 'p':
 			dump_reg_offset = strtoul(optarg, NULL, 0);
@@ -154,7 +154,7 @@ int main(int argc, char **argv)
 				dump_reg_len = strtoul(argv[optind], NULL, 0);
 				optind++; // consume it
 			}
-			flags |= BIT(FLAG_DUMP_REGISTERS);
+			SET_BIT(flags, FLAG_DUMP_REGISTERS);
 			break;
 		case 'h':
 			__attribute__((fallthrough));
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	if ((flags & BIT(FLAG_DUMP_REGISTERS))) {
+	if (GET_BIT(flags, FLAG_DUMP_REGISTERS)) {
 		uint8_t reg_val[(dump_reg_len > 0x100) ? 0x100 : dump_reg_len];
 
 		if (dump_reg_len > 0x100) {
@@ -223,7 +223,7 @@ int main(int argc, char **argv)
 	}
 
 	/* init */
-	if (flags & BIT(FLAG_USE_SPI)) {
+	if (USE_SPI(flags)) {
 		ret = init_dlb4_spi();
 	} else {
 		int retries = 0;
@@ -262,14 +262,14 @@ int main(int argc, char **argv)
 	}
 
 	/* check stage */
-	if (!(flags & BIT(FLAG_SKIP_CHECK_STAGE))) {
+	if (!(GET_BIT(flags, FLAG_SKIP_CHECK_STAGE))) {
 		ret = flash_check();
 		if (ret) {
 			goto out;
 		}
 	}
 
-	if (flags & BIT(FLAG_ERASE_STAGE_ONLY) || !keep_running) {
+	if (GET_BIT(flags, FLAG_ERASE_STAGE_ONLY) || !keep_running) {
 		ret = 0;
 		goto out;
 	}
@@ -286,7 +286,7 @@ int main(int argc, char **argv)
 	}
 
 	/* verify stage */
-	if (!(flags & BIT(FLAG_SKIP_VERIFY_STAGE))) {
+	if (!(GET_BIT(flags, FLAG_SKIP_VERIFY_STAGE))) {
 		ret = flash_verify();
 		if (ret) {
 			goto out;

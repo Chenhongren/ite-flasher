@@ -33,6 +33,9 @@
 #define BYTE_0(x) FIELD_GET(GENMASK(7, 0), x)
 #define BYTE_1(x) FIELD_GET(GENMASK(15, 8), x)
 
+#define GET_BIT(value, bit) (((value) >> (bit)) & 0x1)
+#define SET_BIT(value, bit) ((value) |= (1U << (bit)))
+
 #define SAFE_FREE_PTR(p)                                                                           \
 	if (p) {                                                                                   \
 		free(p);                                                                           \
@@ -55,7 +58,7 @@
 #define msleep(msecs)                                                                              \
 	nanosleep(&(struct timespec){msecs / 1000, (msecs * 1000000) % 1000000000UL}, NULL);
 
-#define USE_SPI(flag) ((flag) & BIT(FLAG_USE_SPI))
+#define USE_SPI(flag) GET_BIT(flag, FLAG_USE_SPI)
 
 void print_progress(const char *stage, int percent);
 
