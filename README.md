@@ -26,7 +26,31 @@ Supports I2C and SPI(hasn't verified) interfaces and integrates optional stages 
 ### Requirements
 - GCC or Clang
 - Make build system
-- libusb (required)
+- libusb (required, execute `requirement.sh`)
+  ```bash
+    ren@Ren-SurfacePro:~/itedlb4-linux-v106$ sudo sh requirement.sh
+    [sudo] password for ren:
+    <info> command: sudo apt-get install -y libusb-1.0-0-dev
+    Reading package lists... Done
+    Building dependency tree... Done
+    Reading state information... Done
+    libusb-1.0-0-dev is already the newest version (2:1.0.25-1ubuntu2).
+    The following packages were automatically installed and are no longer required:
+      apport-symptoms bc distro-info python3-automat python3-bcrypt python3-click python3-colorama python3-constantly python3-gdbm
+      python3-hamcrest python3-hyperlink python3-incremental python3-problem-report python3-pycurl python3-service-identity python3-systemd
+      python3-twisted python3-zope.interface
+    Use 'sudo apt autoremove' to remove them.
+    0 upgraded, 0 newly installed, 0 to remove and 161 not upgraded.
+
+    <info> creating udev rule file /etc/udev/rules.d/99-ite-download-board-usb-device.rules...
+    <info> command: sudo bash -c 'cat > "/etc/udev/rules.d/99-ite-download-board-usb-device.rules" <<EOF
+    SUBSYSTEM=="usb", ATTR{idVendor}=="048d", ATTR{idProduct}=="8390", MODE="0666"
+    EOF'
+    <info> reloading udev rules...
+    <info> command: sudo udevadm control --reload-rules
+    <info> command: sudo udevadm trigger
+    <info> please unplug and re-plug the ite download board
+  ```
 - Linux OS environment (Ubuntu 22.04.5 LTS (Jammy Jellyfish))
 
 ### Example
