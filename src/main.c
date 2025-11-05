@@ -21,6 +21,10 @@
 #include "parameters.h"
 #include "logging.h"
 
+#define MONITOR_MIN_MSEC     10
+#define MONITOR_DEFAULT_MSEC 1000
+#define MONITOR_MAX_MSEC     10000
+
 volatile sig_atomic_t keep_running = 1;
 
 struct soc_info_t soc;
@@ -38,6 +42,9 @@ static void print_help(const char *progname)
 	LOG_RAW("  -d, --debug_mode                    Enable debug messages\n");
 	LOG_RAW("  -p, --dump_register <offset> [len]  Dump register(s) from device (max 256 "
 		"bytes)\n");
+	LOG_RAW("  -m, --monitor [ms]                  Enable monitoring (optional value in ms)\n");
+	LOG_RAW("                                      Default: %d, Range: %d-%d\n",
+		MONITOR_DEFAULT_MSEC, MONITOR_MIN_MSEC, MONITOR_MAX_MSEC);
 	LOG_RAW("  -v, --version                       Show program version\n");
 	LOG_RAW("  -h, --help                          Show this help message and exit\n\n");
 	LOG_RAW("Examples:\n");
@@ -71,6 +78,15 @@ static void print_parameters(const int flags)
 		LOG_INFO("debug mode is enabled");
 	}
 
+	if (GET_BIT(flags, FLAG_DUMP_REGISTERS)) {
+		if (GET_BIT(flags, FLAG_MONITOR_REGISTERS)) {
+			LOG_INFO("monitor and dump flags are enabled");
+		} else {
+			LOG_INFO("dump flag is enabled");
+		}
+		goto out;
+	}
+
 	if (GET_BIT(flags, FLAG_ERASE_STAGE_ONLY)) {
 		LOG_INFO("erase stage only");
 		goto out;
@@ -102,19 +118,21 @@ int main(int argc, char **argv)
 	int option_index = 0;
 	int c;
 	char *filename = NULL;
-	char *optstring = "f:s:p:uedvh";
+	char *optstring = "f:s:p:m::uedvh";
 	const struct option long_options[] = {{"filename", required_argument, NULL, 'f'},
 					      {"skip", required_argument, NULL, 's'},
 					      {"usespi", no_argument, NULL, 'u'},
 					      {"erase", no_argument, NULL, 'e'},
 					      {"debug_mode", no_argument, NULL, 'd'},
 					      {"dump_register", required_argument, NULL, 'p'},
+					      {"monitor", optional_argument, NULL, 'm'},
 					      {"version", no_argument, NULL, 'v'},
 					      {"help", no_argument, NULL, 'h'},
 					      {0, 0, 0, 0}};
 	static int ret, flags;
 	uint32_t dump_reg_offset = 0;
 	uint16_t dump_reg_len = 1;
+	long monitor_ms = MONITOR_DEFAULT_MSEC;
 
 	while (1) {
 		c = getopt_long(argc, argv, optstring, long_options, &option_index);
@@ -155,6 +173,18 @@ int main(int argc, char **argv)
 				optind++; // consume it
 			}
 			SET_BIT(flags, FLAG_DUMP_REGISTERS);
+			break;
+		case 'm':
+			if (optarg) {
+				monitor_ms = strtol(optarg, NULL, 0);
+			}
+
+			if (monitor_ms < MONITOR_MIN_MSEC || monitor_ms > MONITOR_MAX_MSEC) {
+				LOG_ERR("invalid monitor_ms(%ld ms), restore to default(1000 ms)",
+					monitor_ms);
+				monitor_ms = MONITOR_DEFAULT_MSEC;
+			}
+			SET_BIT(flags, FLAG_MONITOR_REGISTERS);
 			break;
 		case 'h':
 			__attribute__((fallthrough));
@@ -198,6 +228,12 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
+	if (GET_BIT(flags, FLAG_MONITOR_REGISTERS) && !GET_BIT(flags, FLAG_DUMP_REGISTERS)) {
+		LOG_ERR("register: monitor flag is enabled but dump flag is null");
+		ret = -EINVAL;
+		goto out;
+	}
+
 	if (GET_BIT(flags, FLAG_DUMP_REGISTERS)) {
 		uint8_t reg_val[(dump_reg_len > 0x100) ? 0x100 : dump_reg_len];
 
@@ -208,14 +244,19 @@ int main(int argc, char **argv)
 
 		LOG_RAW("dump request: offset 0x%06x, len %u\n", 0xF00000 + dump_reg_offset,
 			dump_reg_len);
-		for (int i = 0; i < dump_reg_len; i++) {
-			ret = read_register(dump_reg_offset + i, &reg_val[i]);
-			if (ret) {
-				LOG_INFO("failed to read offset[0x%x]", dump_reg_offset + i);
-				goto out;
+		do {
+			for (int i = 0; i < dump_reg_len; i++) {
+				ret = read_register(dump_reg_offset + i, &reg_val[i]);
+				if (ret) {
+					LOG_INFO("failed to read offset[0x%x]",
+						 dump_reg_offset + i);
+					goto out;
+				}
 			}
-		}
-		hexdump(reg_val, 0, dump_reg_len);
+			hexdump(reg_val, 0, dump_reg_len);
+			LOG_RAW("\n");
+			msleep(monitor_ms);
+		} while (keep_running && GET_BIT(flags, FLAG_MONITOR_REGISTERS));
 
 		LOG_WARN("flash programming is skipped if dump is requested");
 		ret = 0;

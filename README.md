@@ -16,6 +16,9 @@ Supports I2C and SPI(hasn't verified) interfaces and integrates optional stages 
 - Dump EC register values using `--dump <offset> [len]` or `-p`
   - `len` is optional (defaults to 1)
   - Supports up to 256 registers at one time
+- Monitoring interval (`--monitor [ms]` or `-m`)
+  - Default: `MONITOR_DEFAULT_MSEC` ms
+  - Valid range: `MONITOR_MIN_MSEC`–`MONITOR_MAX_MSEC` ms
 - Optional debug mode output
 - Display `ite-flasher` version and usage help
 
@@ -63,7 +66,7 @@ make clean; make all
 ## Usage
 
 ```bash
-ren@Ren-SurfacePro:~/itedlb4-linux-v106$ sudo ./build/ite-flasher -h
+ren@Ren-SurfacePro:~/ite-flasher$ ./build/ite-flasher -h
 ITE EC Flasher Utility v1.0.0
 Usage: ./build/ite-flasher [options]
 
@@ -71,9 +74,11 @@ Options:
   -f, --filename <path>               Specify binary file to flash
   -s, --skip <check|verify>           Skip specified stage (check or verify)
   -u, --usespi                        Use SPI interface instead of default
-  -e, --erase                         Erase flash only (no programming)
+  -e, --erase                         Erase and check flash only (no programming)
   -d, --debug_mode                    Enable debug messages
   -p, --dump_register <offset> [len]  Dump register(s) from device (max 256 bytes)
+  -m, --monitor [ms]                  Enable monitoring (optional value in ms)
+                                      Default: 1000, Range: 10-10000
   -v, --version                       Show program version
   -h, --help                          Show this help message and exit
 
@@ -82,5 +87,4 @@ Examples:
   ./build/ite-flasher -f zephyr.bin -s check
   ./build/ite-flasher -p 0x2085              # Dump one register
   ./build/ite-flasher -p 0x2085 0x10         # Dump 16 registers
-
 ```

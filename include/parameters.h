@@ -17,6 +17,7 @@ enum update_flags {
 	FLAG_USE_SPI,
 	FLAG_ERASE_STAGE_ONLY,
 	FLAG_DUMP_REGISTERS,
+	FLAG_MONITOR_REGISTERS,
 };
 
 static bool debug_mode;
