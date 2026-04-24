@@ -173,8 +173,11 @@ int flash_check(void);
 int flash_program(void);
 int flash_verify(void);
 
+int send_specific_d2ec_command(void);
+
 int enable_qe_bit_and_reset_ec(void);
 
+int write_register(const uint16_t offset, const uint8_t data);
 int read_register(uint16_t offset, uint8_t *data);
 
 #endif /* ITE_FLASHER_H_ */

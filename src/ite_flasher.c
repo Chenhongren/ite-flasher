@@ -340,7 +340,7 @@ static int rw_dbgr_command_set(const uint8_t rw, const uint8_t cmd, uint8_t *val
 	return ret;
 }
 
-static int write_register(const uint16_t offset, const uint8_t data)
+int write_register(const uint16_t offset, const uint8_t data)
 {
 	unsigned char local[1];
 	struct dlb4_operation_t cmdParam;
@@ -380,6 +380,25 @@ static int update_non_sst_flash_sataus(const uint8_t byte_count, const uint8_t s
 	return ret;
 }
 
+int send_specific_d2ec_command(void)
+{
+	int ret;
+
+	ret = start_d2ec(0x07); /* start */
+	if (ret) {
+		return ret;
+	}
+
+	msleep(50);
+
+	ret = start_d2ec(0x0); /* stop */
+	if (ret) {
+		return ret;
+	}
+
+	return ret;
+}
+
 int read_register(const uint16_t offset, uint8_t *data)
 {
 	int ret;
@@ -397,6 +416,10 @@ int read_register(const uint16_t offset, uint8_t *data)
 	cmdParam.size = sizeof(local);
 	cmdParam.p1 = BYTE_1(offset);
 	cmdParam.p2 = BYTE_0(offset);
+	cmdParam.p3 = 0x0;
+	cmdParam.p4 = 0x0;
+	cmdParam.p5 = 0x0;
+	cmdParam.p6 = 0x0;
 	cmdParam.p7 = 0xf0;
 
 	ret = excute_command(&cmdParam);

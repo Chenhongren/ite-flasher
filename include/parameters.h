@@ -18,6 +18,7 @@ enum update_flags {
 	FLAG_ERASE_STAGE_ONLY,
 	FLAG_DUMP_REGISTERS,
 	FLAG_MONITOR_REGISTERS,
+	FLAG_WRITE_REGISTER,
 };
 
 static bool debug_mode;

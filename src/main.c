@@ -42,6 +42,8 @@ static void print_help(const char *progname)
 	LOG_RAW("  -d, --debug_mode                    Enable debug messages\n");
 	LOG_RAW("  -p, --dump_register <offset> [len]  Dump register(s) from device (max 256 "
 		"bytes)\n");
+	LOG_RAW("  -w, --write <offset> <value>        Write value to register at offset\n");
+	LOG_RAW("                                      (value: 1 byte, max 0xFF)\n");
 	LOG_RAW("  -m, --monitor [ms]                  Enable monitoring (optional value in ms)\n");
 	LOG_RAW("                                      Default: %d, Range: %d-%d\n",
 		MONITOR_DEFAULT_MSEC, MONITOR_MIN_MSEC, MONITOR_MAX_MSEC);
@@ -52,6 +54,7 @@ static void print_help(const char *progname)
 	LOG_RAW("  %s -f zephyr.bin -s check\n", progname);
 	LOG_RAW("  %s -p 0x2085              # Dump one register\n", progname);
 	LOG_RAW("  %s -p 0x2085 0x10         # Dump 16 registers\n", progname);
+	LOG_RAW("  %s -w 0x1610 0x40         # Write 0x40 to register 0xF01610\n", progname);
 }
 
 static void signal_handler(int signum)
@@ -118,20 +121,22 @@ int main(int argc, char **argv)
 	int option_index = 0;
 	int c;
 	char *filename = NULL;
-	char *optstring = "f:s:p:m::uedvh";
+	char *optstring = "f:s:p:w:m::uedvh";
 	const struct option long_options[] = {{"filename", required_argument, NULL, 'f'},
 					      {"skip", required_argument, NULL, 's'},
 					      {"usespi", no_argument, NULL, 'u'},
 					      {"erase", no_argument, NULL, 'e'},
 					      {"debug_mode", no_argument, NULL, 'd'},
 					      {"dump_register", required_argument, NULL, 'p'},
+					      {"write", required_argument, NULL, 'w'},
 					      {"monitor", optional_argument, NULL, 'm'},
 					      {"version", no_argument, NULL, 'v'},
 					      {"help", no_argument, NULL, 'h'},
 					      {0, 0, 0, 0}};
 	static int ret, flags;
-	uint32_t dump_reg_offset = 0;
+	uint32_t reg_offset = 0;
 	uint16_t dump_reg_len = 1;
+	uint8_t write_reg_value = 0;
 	long monitor_ms = MONITOR_DEFAULT_MSEC;
 
 	while (1) {
@@ -162,17 +167,33 @@ int main(int argc, char **argv)
 			SET_BIT(flags, FLAG_ERASE_STAGE_ONLY);
 			break;
 		case 'p':
-			dump_reg_offset = strtoul(optarg, NULL, 0);
-			if (dump_reg_offset > 0xFFFF) {
-				LOG_ERR("invalid offset 0x%08x(> 0xFFFF)", dump_reg_offset);
+			__attribute__((fallthrough));
+		case 'w':
+			reg_offset = strtoul(optarg, NULL, 0);
+			if (reg_offset > 0xFFFF) {
+				LOG_ERR("invalid offset 0x%08x(> 0xFFFF)\n", reg_offset);
+				print_help(argv[0]);
 				return -EINVAL;
 			}
-
-			if (optind < argc && argv[optind][0] != '-') {
-				dump_reg_len = strtoul(argv[optind], NULL, 0);
-				optind++; // consume it
+			if (c == 'p') {
+				if (optind < argc && argv[optind][0] != '-') {
+					dump_reg_len = strtoul(argv[optind], NULL, 0);
+					optind++; // consume it
+				}
+				SET_BIT(flags, FLAG_DUMP_REGISTERS);
+			} else {
+				if (optind >= argc) {
+					LOG_ERR("missing value for `--write`\n");
+					print_help(argv[0]);
+					return -EINVAL;
+				}
+				if (argv[optind][0] != '-') {
+					write_reg_value = strtoul(argv[optind], NULL, 0);
+					optind++;
+				}
+				SET_BIT(flags, FLAG_WRITE_REGISTER);
 			}
-			SET_BIT(flags, FLAG_DUMP_REGISTERS);
+
 			break;
 		case 'm':
 			if (optarg) {
@@ -234,6 +255,38 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
+	if (GET_BIT(flags, FLAG_WRITE_REGISTER)) {
+		LOG_RAW("write request: offset 0x%06x, value 0x%x\n\n", 0xF00000 + reg_offset,
+			write_reg_value);
+
+		ret = send_specific_d2ec_command();
+		if (ret) {
+			LOG_ERR("failed to send specific d2ec command");
+			goto out;
+		}
+
+		ret = write_register(reg_offset, write_reg_value);
+		if (ret) {
+			LOG_ERR("failed to write offset[0x%x]", reg_offset);
+		}
+
+		uint8_t reg_val_temp;
+
+		ret = read_register(reg_offset, &reg_val_temp);
+		if (ret) {
+			LOG_ERR("failed to read offset[0x%x]", reg_offset);
+		}
+
+		if (reg_val_temp != write_reg_value) {
+			LOG_ERR("failed to write offset[0x%x], cmp error (0x%x != 0x%x(exp.))",
+				reg_offset, reg_val_temp, write_reg_value);
+		}
+
+		LOG_WARN("flash programming is skipped if write is requested");
+		ret = 0;
+		goto out;
+	}
+
 	if (GET_BIT(flags, FLAG_DUMP_REGISTERS)) {
 		uint8_t reg_val[(dump_reg_len > 0x100) ? 0x100 : dump_reg_len];
 
@@ -242,14 +295,20 @@ int main(int argc, char **argv)
 			dump_reg_len = 0x100;
 		}
 
-		LOG_RAW("dump request: offset 0x%06x, len %u\n", 0xF00000 + dump_reg_offset,
+		LOG_RAW("dump request: offset 0x%06x, len %u\n", 0xF00000 + reg_offset,
 			dump_reg_len);
+
+		ret = send_specific_d2ec_command();
+		if (ret) {
+			LOG_ERR("failed to send specific d2ec command");
+			goto out;
+		}
+
 		do {
 			for (int i = 0; i < dump_reg_len; i++) {
-				ret = read_register(dump_reg_offset + i, &reg_val[i]);
+				ret = read_register(reg_offset + i, &reg_val[i]);
 				if (ret) {
-					LOG_INFO("failed to read offset[0x%x]",
-						 dump_reg_offset + i);
+					LOG_INFO("failed to read offset[0x%x]", reg_offset + i);
 					goto out;
 				}
 			}
