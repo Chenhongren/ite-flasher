@@ -16,11 +16,13 @@ Supports I2C and SPI(hasn't verified) interfaces and integrates optional stages 
 - Dump EC register values using `--dump <offset> [len]` or `-p`
   - `len` is optional (defaults to 1)
   - Supports up to 256 registers at one time
+- Write a value to an EC register (--write <offset> <value> or -w)
+  - Supports 1-byte values (maximum 0xFF)
 - Monitoring interval (`--monitor [ms]` or `-m`)
-  - Default: `MONITOR_DEFAULT_MSEC` ms
-  - Valid range: `MONITOR_MIN_MSEC`–`MONITOR_MAX_MSEC` ms
-- Optional debug mode output
-- Display `ite-flasher` version and usage help
+  - Default: `MONITOR_DEFAULT_MSEC` ms (1000 ms)
+  - Valid range: `MONITOR_MIN_MSEC`–`MONITOR_MAX_MSEC` ms (10 - 10000 ms)
+- Optional debug mode output (`--debug_mode` or `-d`)
+- Display `ite-flasher` version (`--version` or `-v`) and usage help (`--help` or `-h`)
 
 ---
 
@@ -77,6 +79,8 @@ Options:
   -e, --erase                         Erase and check flash only (no programming)
   -d, --debug_mode                    Enable debug messages
   -p, --dump_register <offset> [len]  Dump register(s) from device (max 256 bytes)
+  -w, --write <offset> <value>        Write value to register at offset
+                                      (value: 1 byte, max 0xFF)
   -m, --monitor [ms]                  Enable monitoring (optional value in ms)
                                       Default: 1000, Range: 10-10000
   -v, --version                       Show program version
@@ -87,4 +91,5 @@ Examples:
   ./build/ite-flasher -f zephyr.bin -s check
   ./build/ite-flasher -p 0x2085              # Dump one register
   ./build/ite-flasher -p 0x2085 0x10         # Dump 16 registers
+  ./build/ite-flasher -w 0x1610 0x40         # Write 0x40 to register 0xF01610
 ```
