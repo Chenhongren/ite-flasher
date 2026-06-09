@@ -172,6 +172,7 @@ int flash_erase(bool use_spi);
 int flash_check(void);
 int flash_program(void);
 int flash_verify(void);
+int flash_read(const char *filename);
 
 int send_specific_d2ec_command(void);
 

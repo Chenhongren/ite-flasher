@@ -74,6 +74,7 @@ Usage: ./build/ite-flasher [options]
 
 Options:
   -f, --filename <path>               Specify binary file to flash
+  -r, --read <path/file_name>         Read binary file from flash
   -s, --skip <check|verify>           Skip specified stage (check or verify)
   -u, --usespi                        Use SPI interface instead of default
   -e, --erase                         Erase and check flash only (no programming)

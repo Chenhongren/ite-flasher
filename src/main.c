@@ -35,6 +35,7 @@ static void print_help(const char *progname)
 	LOG_RAW("Usage: %s [options]\n\n", progname);
 	LOG_RAW("Options:\n");
 	LOG_RAW("  -f, --filename <path>               Specify binary file to flash\n");
+	LOG_RAW("  -r, --read <path/file_name>         Read binary file from flash\n");
 	LOG_RAW("  -s, --skip <check|verify>           Skip specified stage (check or verify)\n");
 	LOG_RAW("  -u, --usespi                        Use SPI interface instead of default\n");
 	LOG_RAW("  -e, --erase                         Erase and check flash only (no "
@@ -120,12 +121,13 @@ int main(int argc, char **argv)
 {
 	int option_index = 0;
 	int c;
-	char *filename = NULL;
-	char *optstring = "f:s:p:w:m::uedvh";
+	char *filename = NULL, *rx_filename = NULL;
+	char *optstring = "f:s:p:w:m::r:uedvh";
 	const struct option long_options[] = {{"filename", required_argument, NULL, 'f'},
 					      {"skip", required_argument, NULL, 's'},
 					      {"usespi", no_argument, NULL, 'u'},
 					      {"erase", no_argument, NULL, 'e'},
+					      {"read", required_argument, NULL, 'r'},
 					      {"debug_mode", no_argument, NULL, 'd'},
 					      {"dump_register", required_argument, NULL, 'p'},
 					      {"write", required_argument, NULL, 'w'},
@@ -159,6 +161,10 @@ int main(int argc, char **argv)
 			if (strcmp(optarg, "verify") == 0) {
 				SET_BIT(flags, FLAG_SKIP_VERIFY_STAGE);
 			}
+			break;
+		case 'r':
+			SET_BIT(flags, FLAG_READ_FLASH);
+			rx_filename = optarg;
 			break;
 		case 'u':
 			SET_BIT(flags, FLAG_USE_SPI);
@@ -349,6 +355,13 @@ int main(int argc, char **argv)
 	}
 
 	show_itedlb4(USE_SPI(flags));
+
+	if (GET_BIT(flags, FLAG_READ_FLASH)) {
+		ret = flash_read(rx_filename);
+		enable_qe_bit_and_reset_ec();
+		LOG_WARN("flash reading is finished");
+		goto out;
+	}
 
 	/* erase stage */
 	ret = flash_erase(USE_SPI(flags));

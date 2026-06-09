@@ -619,6 +619,44 @@ int flash_verify(void)
 	return 0;
 }
 
+int flash_read(const char *filename)
+{
+	int ret;
+	FILE *fp;
+	uint32_t total_size = file.size;
+	uint32_t block_size = FILE_SIZE_64K;
+	uint32_t dumped = 0;
+
+	fp = fopen(filename, "wb");
+	if (!fp) {
+		LOG_ERR("failed to open %s", filename);
+		return -errno;
+	}
+
+	for (int i = 0; i < file.block_num; i++) {
+		uint32_t cur_size = MIN(block_size, total_size - dumped);
+
+		ret = readflash(i, flash_info.read_mode, g_readbuf);
+		if (ret) {
+			LOG_ERR("failed to read flash at block %d", i);
+			fclose(fp);
+			return ret;
+		}
+
+		if (fwrite(g_readbuf, 1, cur_size, fp) != cur_size) {
+			LOG_ERR("failed to write file");
+			fclose(fp);
+			return -EIO;
+		}
+
+		dumped += cur_size;
+		print_progress("Dumping", dumped * 100 / total_size);
+	}
+
+	fclose(fp);
+	return 0;
+}
+
 static int enter_spi(void)
 {
 	CHECK_RET(dlb4_set_gpio(ITE_DLB_GPIO_G6, ITE_DLB_GPIO_LOW));
